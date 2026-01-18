@@ -29,6 +29,9 @@ export function useReserveTickets() {
       // Invalidar cache de availability
       queryClient.invalidateQueries({ queryKey: ['availability'] })
       
+      // Guardar reserva en localStorage para checkout
+      localStorage.setItem('current_reservation', JSON.stringify(data))
+      
       // Redirigir a checkout con reservationId
       router.push(`/checkout?reservationId=${data.reservationId}`)
     },
