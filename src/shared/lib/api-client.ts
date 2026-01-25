@@ -82,6 +82,7 @@ class ApiClient {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ refreshToken }),
+        credentials: 'include', // Incluir credenciales para que las cookies se envíen
       })
 
       if (!response.ok) {
@@ -142,6 +143,7 @@ class ApiClient {
       const response = await fetch(url, {
         ...options,
         signal: controller.signal,
+        credentials: 'include', // Incluir credenciales en todas las solicitudes
       })
       clearTimeout(timeoutId)
       return response
