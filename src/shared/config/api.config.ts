@@ -4,8 +4,8 @@
  * @description Configuración de API - FTM Ticketera
  * @author      Matías Carrión
  * @created     2025-01-08
- * @updated     2025-01-16
- * @version     2.0.0
+ * @updated     2026-01-25
+ * @version     2.0.1 - Endpoints alineados con backend /api/v1
  * ============================================================
  */
 
@@ -13,8 +13,11 @@
 // ENVIRONMENT VARIABLES
 // ============================================================================
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'
-const API_VERSION = process.env.NEXT_PUBLIC_API_VERSION || 'v1'
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'
+
+const API_VERSION =
+  process.env.NEXT_PUBLIC_API_VERSION || 'v1'
 
 // ============================================================================
 // API CONFIGURATION
@@ -22,19 +25,21 @@ const API_VERSION = process.env.NEXT_PUBLIC_API_VERSION || 'v1'
 
 export const API_CONFIG = {
   baseURL: `${API_URL}/api/${API_VERSION}`,
-  timeout: 30000, // 30 segundos
+  timeout: 30000, // 30s
   headers: {
     'Content-Type': 'application/json',
-    'Accept': 'application/json',
+    Accept: 'application/json',
   },
 } as const
 
 // ============================================================================
-// API ENDPOINTS
+// API ENDPOINTS (ALINEADOS CON BACKEND REAL)
 // ============================================================================
 
 export const API_ENDPOINTS = {
-  // Auth
+  // --------------------------------------------------------------------------
+  // AUTH
+  // --------------------------------------------------------------------------
   AUTH: {
     LOGIN: '/auth/login',
     REGISTER: '/auth/register',
@@ -46,14 +51,18 @@ export const API_ENDPOINTS = {
     RESET_PASSWORD: '/auth/reset-password',
   },
 
-  // Users
+  // --------------------------------------------------------------------------
+  // USER (EL BACKEND EXPONE auth/me, NO users/me)
+  // --------------------------------------------------------------------------
   USERS: {
-    ME: '/users/me',
-    UPDATE_PROFILE: '/users/me',
-    CHANGE_PASSWORD: '/users/me/password',
+    ME: '/auth/me',
+    UPDATE_PROFILE: '/auth/me',
+    CHANGE_PASSWORD: '/auth/me/password',
   },
 
-  // Events
+  // --------------------------------------------------------------------------
+  // EVENTS (FUTURO)
+  // --------------------------------------------------------------------------
   EVENTS: {
     LIST: '/events',
     PUBLIC_LIST: '/events/public',
@@ -66,7 +75,9 @@ export const API_ENDPOINTS = {
     STATS: (id: string) => `/events/${id}/stats`,
   },
 
-  // Tickets
+  // --------------------------------------------------------------------------
+  // TICKETS (FUTURO)
+  // --------------------------------------------------------------------------
   TICKETS: {
     RESERVE: '/tickets/reserve',
     CONFIRM_PURCHASE: '/tickets/confirm-purchase',
@@ -77,20 +88,26 @@ export const API_ENDPOINTS = {
     DOWNLOAD_PDF: (id: string) => `/tickets/${id}/download`,
   },
 
-  // Purchases
+  // --------------------------------------------------------------------------
+  // PURCHASES (FUTURO)
+  // --------------------------------------------------------------------------
   PURCHASES: {
     MY_PURCHASES: '/purchases/my-purchases',
     BY_ID: (id: string) => `/purchases/${id}`,
     REQUEST_REFUND: (id: string) => `/purchases/${id}/refund`,
   },
 
-  // Dashboard
+  // --------------------------------------------------------------------------
+  // DASHBOARD (FUTURO)
+  // --------------------------------------------------------------------------
   DASHBOARD: {
     PRODUCER_STATS: '/dashboard/producer/stats',
     STAFF_STATS: '/dashboard/staff/stats',
   },
 
-  // Staff
+  // --------------------------------------------------------------------------
+  // STAFF (FUTURO)
+  // --------------------------------------------------------------------------
   STAFF: {
     ONBOARDING_STATUS: '/staff/onboarding/status',
     START_ONBOARDING: '/staff/onboarding/start',
@@ -98,7 +115,9 @@ export const API_ENDPOINTS = {
     ASSIGNMENTS: '/staff/assignments',
   },
 
-  // Health
+  // --------------------------------------------------------------------------
+  // HEALTH
+  // --------------------------------------------------------------------------
   HEALTH: {
     CHECK: '/health',
   },
@@ -123,7 +142,7 @@ export const HTTP_STATUS = {
 } as const
 
 // ============================================================================
-// ERROR CODES (alineados con backend)
+// ERROR CODES (ALINEADOS CON BACKEND)
 // ============================================================================
 
 export const ERROR_CODES = {
@@ -137,7 +156,7 @@ export const ERROR_CODES = {
   VALIDATION_ERROR: 'VALIDATION_ERROR',
   INVALID_INPUT: 'INVALID_INPUT',
 
-  // Business logic
+  // Business
   EVENT_NOT_FOUND: 'EVENT_NOT_FOUND',
   TICKET_NOT_AVAILABLE: 'TICKET_NOT_AVAILABLE',
   RESERVATION_EXPIRED: 'RESERVATION_EXPIRED',
