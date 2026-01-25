@@ -1,13 +1,3 @@
-/**
- * ============================================================
- * @file        page.tsx
- * @description Página de registro con validación completa
- * @author      Matías Carrión
- * @created     2025-01-08
- * @version     1.0.0
- * ============================================================
- */
-
 'use client'
 
 import { useState } from 'react'
@@ -18,40 +8,47 @@ import { z } from 'zod'
 
 import { useAuth } from '../../../features/auth/context/AuthContext'
 import { HttpError } from '../../../shared/lib/http-error'
-// import type { Country, DocumentType } from '../../../shared/types'
 
 // ============================================================================
-// VALIDATION SCHEMA
+// VALIDATION SCHEMA (ALINEADO AL BACKEND)
 // ============================================================================
 
 const registerSchema = z.object({
-  email: z
-    .string()
-    .min(1, 'El email es requerido')
-    .email('Email inválido'),
+  email: z.string().email('Email inválido'),
+
   password: z
     .string()
-    .min(8, 'La contraseña debe tener al menos 8 caracteres')
-    .regex(/[A-Z]/, 'Debe contener al menos una mayúscula')
-    .regex(/[0-9]/, 'Debe contener al menos un número'),
+    .min(8, 'Debe tener al menos 8 caracteres')
+    .regex(
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>])/,
+      'Debe incluir mayúscula, minúscula, número y carácter especial'
+    ),
+
   firstName: z
     .string()
-    .min(2, 'El nombre debe tener al menos 2 caracteres'),
+    .min(2, 'Nombre mínimo 2 caracteres')
+    .regex(/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/, 'Solo letras'),
+
   lastName: z
     .string()
-    .min(2, 'El apellido debe tener al menos 2 caracteres'),
+    .min(2, 'Apellido mínimo 2 caracteres')
+    .regex(/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/, 'Solo letras'),
+
+  documentId: z
+    .string()
+    .min(7, 'Documento inválido')
+    .max(20, 'Documento inválido'),
+
+  country: z.enum(['CL', 'AR']),
+
+  birthDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Formato YYYY-MM-DD'),
+
+  // ✅ OBLIGATORIO (alineado con backend y AuthContext)
   phone: z
     .string()
-    .min(9, 'El teléfono debe tener al menos 9 dígitos')
-    .regex(/^[0-9+]+$/, 'El teléfono solo debe contener números'),
-  documentType: z.enum(['RUT', 'DNI', 'PASSPORT']),
-  documentNumber: z
-    .string()
-    .min(7, 'El documento debe tener al menos 7 caracteres'),
-  country: z.enum(['CL', 'AR']),
-  dateOfBirth: z
-    .string()
-    .min(1, 'La fecha de nacimiento es requerida'),
+    .regex(/^\+?[1-9]\d{7,14}$/, 'Formato internacional'),
 })
 
 type RegisterFormData = z.infer<typeof registerSchema>
@@ -67,17 +64,13 @@ export default function RegisterPage() {
   const {
     register,
     handleSubmit,
-    watch,
-    formState: { errors, isSubmitting },
+    formState: { isSubmitting },
   } = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
       country: 'CL',
-      documentType: 'RUT',
     },
   })
-
-  const selectedCountry = watch('country')
 
   const onSubmit = async (data: RegisterFormData) => {
     try {
@@ -87,7 +80,7 @@ export default function RegisterPage() {
       if (err instanceof HttpError) {
         setError(err.getUserFriendlyMessage())
       } else {
-        setError('Ocurrió un error inesperado. Intenta nuevamente.')
+        setError('Error inesperado. Intenta nuevamente.')
       }
     }
   }
@@ -99,7 +92,7 @@ export default function RegisterPage() {
           <h1 className="text-3xl font-bold text-gray-900">
             FTM Ticketera
           </h1>
-          <h2 className="mt-6 text-2xl font-semibold text-gray-700">
+          <h2 className="mt-4 text-xl text-gray-700">
             Crear Cuenta
           </h2>
           <p className="mt-2 text-sm text-gray-600">
@@ -108,163 +101,35 @@ export default function RegisterPage() {
               href="/login"
               className="font-medium text-primary hover:underline"
             >
-              Inicia sesión aquí
+              Inicia sesión
             </Link>
           </p>
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="mt-8 space-y-6">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           {error && (
-            <div className="rounded-md bg-red-50 p-4">
-              <p className="text-sm text-red-800">{error}</p>
+            <div className="rounded bg-red-50 p-3 text-sm text-red-700">
+              {error}
             </div>
           )}
 
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Nombre
-              </label>
-              <input
-                {...register('firstName')}
-                type="text"
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-              />
-              {errors.firstName && (
-                <p className="mt-1 text-sm text-red-600">
-                  {errors.firstName.message}
-                </p>
-              )}
-            </div>
+          <input {...register('firstName')} placeholder="Nombre" />
+          <input {...register('lastName')} placeholder="Apellido" />
+          <input {...register('email')} type="email" placeholder="Email" />
+          <input {...register('password')} type="password" placeholder="Contraseña" />
+          <input {...register('documentId')} placeholder="Documento" />
+          <input {...register('birthDate')} type="date" />
+          <input {...register('phone')} placeholder="+56912345678" />
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Apellido
-              </label>
-              <input
-                {...register('lastName')}
-                type="text"
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-              />
-              {errors.lastName && (
-                <p className="mt-1 text-sm text-red-600">
-                  {errors.lastName.message}
-                </p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Email
-              </label>
-              <input
-                {...register('email')}
-                type="email"
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-              />
-              {errors.email && (
-                <p className="mt-1 text-sm text-red-600">
-                  {errors.email.message}
-                </p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Teléfono
-              </label>
-              <input
-                {...register('phone')}
-                type="tel"
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-              />
-              {errors.phone && (
-                <p className="mt-1 text-sm text-red-600">
-                  {errors.phone.message}
-                </p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                País
-              </label>
-              <select
-                {...register('country')}
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-              >
-                <option value="CL">Chile</option>
-                <option value="AR">Argentina</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Tipo de Documento
-              </label>
-              <select
-                {...register('documentType')}
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-              >
-                {selectedCountry === 'CL' && <option value="RUT">RUT</option>}
-                {selectedCountry === 'AR' && <option value="DNI">DNI</option>}
-                <option value="PASSPORT">Pasaporte</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Número de Documento
-              </label>
-              <input
-                {...register('documentNumber')}
-                type="text"
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-              />
-              {errors.documentNumber && (
-                <p className="mt-1 text-sm text-red-600">
-                  {errors.documentNumber.message}
-                </p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Fecha de Nacimiento
-              </label>
-              <input
-                {...register('dateOfBirth')}
-                type="date"
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-              />
-              {errors.dateOfBirth && (
-                <p className="mt-1 text-sm text-red-600">
-                  {errors.dateOfBirth.message}
-                </p>
-              )}
-            </div>
-
-            <div className="sm:col-span-2">
-              <label className="block text-sm font-medium text-gray-700">
-                Contraseña
-              </label>
-              <input
-                {...register('password')}
-                type="password"
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-              />
-              {errors.password && (
-                <p className="mt-1 text-sm text-red-600">
-                  {errors.password.message}
-                </p>
-              )}
-            </div>
-          </div>
+          <select {...register('country')}>
+            <option value="CL">Chile</option>
+            <option value="AR">Argentina</option>
+          </select>
 
           <button
             type="submit"
             disabled={isSubmitting}
-            className="w-full rounded-md bg-primary px-4 py-2 text-white font-medium hover:bg-primary-light focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full rounded bg-primary py-2 text-white disabled:opacity-50"
           >
             {isSubmitting ? 'Registrando...' : 'Crear Cuenta'}
           </button>
