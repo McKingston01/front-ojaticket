@@ -11,7 +11,6 @@
 'use client'
 
 import { useState } from 'react'
-import type { Metadata } from 'next'
 import { usePublicEvents } from '@/features/events/hooks/usePublicEvents'
 import { EventCard } from '@/features/events/components/EventCard'
 import { EventFilters } from '@/features/events/components/EventFilters'

@@ -60,4 +60,5 @@ UNLICENSED - Uso privado FTM Producciones
 
 DEPENDENCIAS 
 npm install @tanstack/react-query date-fns
+npm install axios
 
