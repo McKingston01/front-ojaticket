@@ -17,7 +17,7 @@ const API_URL =
   process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'
 
 const API_VERSION =
-  process.env.NEXT_PUBLIC_API_VERSION || 'v1'
+  process.env.NEXT_PUBLIC_API_VERSION || 'v2'
 
 // ============================================================================
 // API CONFIGURATION
