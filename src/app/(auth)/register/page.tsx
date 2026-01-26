@@ -1,140 +1,111 @@
 'use client'
 
 import { useState } from 'react'
-import Link from 'next/link'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
-
-import { useAuth } from '@/features/auth/context/AuthContext'
-import { HttpError } from '@/shared/lib/http-error'
+import { useAuth } from '../../../features/auth/context/AuthContext'
 import type { RegisterRequest } from '@/shared/types'
 
-// ============================================================================
-// FORM SCHEMA (FRONTEND)
-// ============================================================================
-
-const registerSchema = z.object({
-  email: z.string().email().toLowerCase().trim(),
-
-  password: z
-    .string()
-    .min(8)
-    .regex(
-      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>])/,
-      'Password inseguro'
-    ),
-
-  firstName: z.string().min(2),
-  lastName: z.string().min(2),
-
-  documentType: z.enum(['RUT', 'DNI']),
-  documentNumber: z.string().min(7),
-
-  country: z.enum(['CL', 'AR']),
-
-  dateOfBirth: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-
-  phone: z.string().regex(/^\+?[1-9]\d{7,14}$/),
-})
-
-type RegisterFormData = z.infer<typeof registerSchema>
-
-// ============================================================================
-// COMPONENT
-// ============================================================================
+interface RegisterFormValues {
+  email: string
+  password: string
+  firstName: string
+  lastName: string
+  phone: string
+  country: 'CL' | 'AR'
+  dateOfBirth: string
+  documentType: 'RUT' | 'DNI'
+  documentNumber: string
+}
 
 export default function RegisterPage() {
-  const { register: registerUser } = useAuth()
+  const { register } = useAuth()
+
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const {
-    register,
-    handleSubmit,
-    formState: { isSubmitting },
-  } = useForm<RegisterFormData>({
-    resolver: zodResolver(registerSchema),
-    defaultValues: {
-      country: 'CL',
-      documentType: 'RUT',
-    },
+  const [form, setForm] = useState<RegisterFormValues>({
+    email: '',
+    password: '',
+    firstName: '',
+    lastName: '',
+    phone: '',
+    country: 'CL',
+    dateOfBirth: '',
+    documentType: 'RUT',
+    documentNumber: '',
   })
 
-  const onSubmit = async (data: RegisterFormData) => {
+  const onChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
+    const { name, value } = e.target
+    setForm((prev) => ({ ...prev, [name]: value }))
+  }
+
+  const onSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsSubmitting(true)
+    setError(null)
+
+    // ✅ DTO EXACTO QUE TU FRONTEND ESPERA
+    const payload: RegisterRequest = {
+      email: form.email,
+      password: form.password,
+      firstName: form.firstName,
+      lastName: form.lastName,
+      phone: form.phone,
+      country: form.country,
+      dateOfBirth: form.dateOfBirth,
+      documentType: form.documentType,
+      documentNumber: form.documentNumber,
+    }
+
     try {
-      setError(null)
-
-      // 🔒 Contrato API EXACTO
-      const payload: RegisterRequest = {
-        email: data.email,
-        password: data.password,
-        firstName: data.firstName,
-        lastName: data.lastName,
-        phone: data.phone,
-        documentType: data.documentType,
-        documentNumber: data.documentNumber,
-        country: data.country,
-        dateOfBirth: data.dateOfBirth,
-      }
-
-      await registerUser(payload)
-    } catch (err) {
-      if (err instanceof HttpError) {
-        setError(err.getUserFriendlyMessage())
-      } else {
-        setError('Error inesperado')
-      }
+      await register(payload)
+    } catch {
+      setError('No se pudo completar el registro')
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
-      <div className="w-full max-w-md space-y-6">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold">FTM Ticketera</h1>
-          <p className="text-sm">
-            ¿Ya tienes cuenta?{' '}
-            <Link href="/login" className="text-blue-600 hover:underline">
-              Inicia sesión
-            </Link>
-          </p>
-        </div>
+    <main className="flex min-h-screen items-center justify-center p-6">
+      <form
+        onSubmit={onSubmit}
+        className="w-full max-w-md space-y-4 rounded-lg border p-6 shadow"
+      >
+        <h1 className="text-2xl font-bold text-center">Crear cuenta</h1>
 
         {error && (
-          <div className="rounded bg-red-100 p-3 text-sm text-red-700">
+          <p className="rounded bg-red-100 p-2 text-sm text-red-700">
             {error}
-          </div>
+          </p>
         )}
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
-          <input {...register('firstName')} placeholder="Nombre" />
-          <input {...register('lastName')} placeholder="Apellido" />
-          <input {...register('email')} type="email" placeholder="Email" />
-          <input {...register('password')} type="password" placeholder="Password" />
+        <input name="email" type="email" placeholder="Email" required value={form.email} onChange={onChange} className="w-full rounded border p-2" />
+        <input name="password" type="password" placeholder="Contraseña" required value={form.password} onChange={onChange} className="w-full rounded border p-2" />
+        <input name="firstName" placeholder="Nombre" required value={form.firstName} onChange={onChange} className="w-full rounded border p-2" />
+        <input name="lastName" placeholder="Apellido" required value={form.lastName} onChange={onChange} className="w-full rounded border p-2" />
+        <input name="phone" placeholder="Teléfono" required value={form.phone} onChange={onChange} className="w-full rounded border p-2" />
 
-          <select {...register('documentType')}>
-            <option value="RUT">RUT</option>
-            <option value="DNI">DNI</option>
-          </select>
+        <select name="country" value={form.country} onChange={onChange} className="w-full rounded border p-2">
+          <option value="CL">Chile</option>
+          <option value="AR">Argentina</option>
+        </select>
 
-          <input {...register('documentNumber')} placeholder="Documento" />
-          <input {...register('dateOfBirth')} type="date" />
-          <input {...register('phone')} placeholder="+56912345678" />
+        <input name="dateOfBirth" type="date" required value={form.dateOfBirth} onChange={onChange} className="w-full rounded border p-2" />
 
-          <select {...register('country')}>
-            <option value="CL">Chile</option>
-            <option value="AR">Argentina</option>
-          </select>
+        <select name="documentType" value={form.documentType} onChange={onChange} className="w-full rounded border p-2">
+          <option value="RUT">RUT</option>
+          <option value="DNI">DNI</option>
+        </select>
 
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="w-full rounded bg-blue-600 py-2 text-white"
-          >
-            {isSubmitting ? 'Registrando…' : 'Crear cuenta'}
-          </button>
-        </form>
-      </div>
-    </div>
+        <input name="documentNumber" placeholder="Número de documento" required value={form.documentNumber} onChange={onChange} className="w-full rounded border p-2" />
+
+        <button type="submit" disabled={isSubmitting} className="w-full rounded bg-black p-2 text-white disabled:opacity-50">
+          {isSubmitting ? 'Registrando…' : 'Registrarse'}
+        </button>
+      </form>
+    </main>
   )
 }
