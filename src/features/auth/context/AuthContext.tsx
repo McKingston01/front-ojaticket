@@ -47,7 +47,7 @@ interface RegisterFormPayload {
   documentId: string
   country: 'CL' | 'AR'
   birthDate: string
-  phone: string // ✅ OBLIGATORIO (alineado con RegisterRequest)
+  phone: string 
 }
 
 interface AuthContextValue {

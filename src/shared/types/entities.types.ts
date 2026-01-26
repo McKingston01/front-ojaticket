@@ -40,10 +40,10 @@ export interface User {
   lastName: string
   role: UserRole
   phone?: string
-  documentType: DocumentType
+  documentId: DocumentType
   documentNumber: string
   country: Country
-  dateOfBirth: string 
+  birthDate: string 
   isActive: boolean
   emailVerified: boolean
   createdAt: string
