@@ -14,10 +14,10 @@
 // ============================================================================
 
 const API_URL =
-  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'
+  process.env.NEXT_PUBLIC_API_URL || 'https://api-ojaticket.onrender.com'
 
 const API_VERSION =
-  process.env.NEXT_PUBLIC_API_VERSION || 'v2'
+  process.env.NEXT_PUBLIC_API_VERSION || 'v1'
 
 // ============================================================================
 // API CONFIGURATION
