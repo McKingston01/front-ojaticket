@@ -4,8 +4,8 @@
  * @description Context global de autenticación con refresh token
  * @author      Matías Carrión
  * @created     2025-01-08
- * @updated     2025-01-16
- * @version     2.2.0
+ * @updated     2025-01-25
+ * @version     2.3.0 - Alineado 100% con backend DTOs
  * ============================================================
  */
 
@@ -17,7 +17,7 @@ import {
   useState,
   useEffect,
   useCallback,
-  ReactNode,
+  type ReactNode,
 } from 'react'
 import { useRouter } from 'next/navigation'
 
@@ -35,27 +35,12 @@ import { HttpError } from '../../../shared/lib/http-error'
 // TYPES
 // ============================================================================
 
-/**
- * Payload que recibe el AuthContext desde el formulario de registro
- * (adaptador frontend → backend)
- */
-interface RegisterFormPayload {
-  email: string
-  password: string
-  firstName: string
-  lastName: string
-  documentId: string
-  country: 'CL' | 'AR'
-  birthDate: string
-  phone: string 
-}
-
 interface AuthContextValue {
   user: User | null
   isLoading: boolean
   isAuthenticated: boolean
   login: (credentials: LoginRequest) => Promise<void>
-  register: (data: RegisterFormPayload) => Promise<void>
+  register: (data: RegisterRequest) => Promise<void>
   loginWithGoogle: (idToken: string) => Promise<void>
   logout: () => Promise<void>
   refreshUser: () => Promise<void>
@@ -97,6 +82,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const userData = await apiClient.get<User>(API_ENDPOINTS.USERS.ME)
       setUser(userData)
     } catch {
+      // Token inválido o expirado, limpiar todo
       localStorage.removeItem(STORAGE_KEYS.ACCESS_TOKEN)
       localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN)
       localStorage.removeItem(STORAGE_KEYS.USER)
@@ -111,27 +97,54 @@ export function AuthProvider({ children }: AuthProviderProps) {
    * Cargar usuario al montar el provider
    */
   useEffect(() => {
-    loadUser()
+    void loadUser()
   }, [loadUser])
+
+  /**
+   * Redirección según rol
+   */
+  const redirectByRole = useCallback(
+    (role: User['role']) => {
+      switch (role) {
+        case 'customer':
+          router.push('/dashboard/customer')
+          break
+        case 'producer':
+          router.push('/dashboard/producer')
+          break
+        case 'staff':
+          router.push('/dashboard/staff')
+          break
+        case 'dev':
+          router.push('/dashboard/dev')
+          break
+        default:
+          router.push('/')
+      }
+    },
+    [router]
+  )
 
   /**
    * Maneja autenticación exitosa
    */
   const handleAuthSuccess = useCallback(
     (response: AuthResponse) => {
+      // Guardar en localStorage
       localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, response.accessToken)
       localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, response.refreshToken)
-      localStorage.setItem(
-        STORAGE_KEYS.USER,
-        JSON.stringify(response.user)
-      )
+      localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(response.user))
 
+      // Configurar API client
       apiClient.setAuthToken(response.accessToken)
+
+      // Actualizar estado
       setUser(response.user)
 
+      // Redirigir según rol
       redirectByRole(response.user.role)
     },
-    []
+    [redirectByRole]
   )
 
   /**
@@ -140,19 +153,20 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const handleAuthError = useCallback(
     (error: unknown) => {
       if (error instanceof HttpError) {
-        // Onboarding requerido
+        // Caso especial: Onboarding requerido para staff
         if (error.statusCode === 409) {
           router.push('/dashboard/staff/onboarding')
           return
         }
       }
+      // Re-lanzar el error para que el componente lo maneje
       throw error
     },
     [router]
   )
 
   /**
-   * Login
+   * Login con email/password
    */
   const login = useCallback(
     async (credentials: LoginRequest) => {
@@ -173,28 +187,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   /**
    * Registro de usuario
-   * Adaptación explícita frontend → backend
+   * 
+   * ✅ CORREGIDO v2.3.0:
+   * - Ya NO necesita adaptación de campos
+   * - RegisterRequest ya está alineado con backend
+   * - Se envía directo sin transformaciones
    */
   const register = useCallback(
-    async (data: RegisterFormPayload) => {
+    async (data: RegisterRequest) => {
       try {
-        const payload: RegisterRequest = {
-          email: data.email,
-          password: data.password,
-          firstName: data.firstName,
-          lastName: data.lastName,
-          phone: data.phone,
-
-          documentType: data.country === 'CL' ? 'RUT' : 'DNI',
-          documentNumber: data.documentId,
-          dateOfBirth: data.birthDate,
-
-          country: data.country,
-        }
-
         const response = await apiClient.post<AuthResponse>(
           API_ENDPOINTS.AUTH.REGISTER,
-          payload,
+          data, // ✅ Se envía directo, ya está alineado
           { skipAuth: true }
         )
 
@@ -231,10 +235,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
    */
   const logout = useCallback(async () => {
     try {
+      // Intentar notificar al backend
       await apiClient.post(API_ENDPOINTS.AUTH.LOGOUT)
     } catch (error) {
+      // Ignorar errores de logout del backend
       console.error('Logout error:', error)
     } finally {
+      // Siempre limpiar el estado local
       localStorage.removeItem(STORAGE_KEYS.ACCESS_TOKEN)
       localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN)
       localStorage.removeItem(STORAGE_KEYS.USER)
@@ -246,41 +253,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   /**
    * Refrescar usuario desde backend
+   * Útil después de actualizar el perfil
    */
   const refreshUser = useCallback(async () => {
     try {
       const userData = await apiClient.get<User>(API_ENDPOINTS.USERS.ME)
       setUser(userData)
-      localStorage.setItem(
-        STORAGE_KEYS.USER,
-        JSON.stringify(userData)
-      )
+      localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(userData))
     } catch (error) {
       console.error('Refresh user error:', error)
+      // Si falla, podría ser que el token expiró
+      // El interceptor de API debería manejar esto
     }
   }, [])
-
-  /**
-   * Redirección según rol
-   */
-  const redirectByRole = (role: User['role']) => {
-    switch (role) {
-      case 'customer':
-        router.push('/dashboard/customer')
-        break
-      case 'producer':
-        router.push('/dashboard/producer')
-        break
-      case 'staff':
-        router.push('/dashboard/staff')
-        break
-      case 'dev':
-        router.push('/dashboard/dev')
-        break
-      default:
-        router.push('/')
-    }
-  }
 
   const value: AuthContextValue = {
     user,
@@ -293,11 +278,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     refreshUser,
   }
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  )
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 
 // ============================================================================

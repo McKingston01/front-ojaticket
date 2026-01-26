@@ -1,5 +1,11 @@
 /**
- * Tipos de Entidades del Dominio - FTM Ticketera
+ * ============================================================
+ * @file        entities.types.ts
+ * @description Tipos de Entidades del Dominio - FTM Ticketera
+ * @author      Matías Carrión
+ * @updated     2025-01-25
+ * @version     2.0.0 - Alineado 100% con backend
+ * ============================================================
  * 
  * REGLA CRÍTICA: Estos tipos DEBEN estar 1:1 alineados con el backend
  * NO modificar sin verificar cambios en el backend primero
@@ -33,6 +39,14 @@ export type DocumentType = 'RUT' | 'DNI' | 'PASSPORT'
 // USER
 // ============================================================================
 
+/**
+ * Entidad User
+ * 
+ * ⚠️ CAMBIOS CRÍTICOS vs versión anterior:
+ * - Ya NO tiene documentType como campo separado
+ * - documentNumber → documentId (un solo campo)
+ * - birthDate (sin cambios, ya estaba correcto)
+ */
 export interface User {
   id: string
   email: string
@@ -40,8 +54,7 @@ export interface User {
   lastName: string
   role: UserRole
   phone?: string
-  documentId: DocumentType
-  documentNumber: string
+  documentId: string 
   country: Country
   birthDate: string 
   isActive: boolean

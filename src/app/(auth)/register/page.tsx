@@ -6,49 +6,36 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 
-import { useAuth } from '../../../features/auth/context/AuthContext'
-import { HttpError } from '../../../shared/lib/http-error'
+import { useAuth } from '@/features/auth/context/AuthContext'
+import { HttpError } from '@/shared/lib/http-error'
+import type { RegisterRequest } from '@/shared/types'
 
 // ============================================================================
-// VALIDATION SCHEMA (ALINEADO AL BACKEND)
+// FORM SCHEMA (FRONTEND)
 // ============================================================================
 
 const registerSchema = z.object({
-  email: z.string().email('Email inválido'),
+  email: z.string().email().toLowerCase().trim(),
 
   password: z
     .string()
-    .min(8, 'Debe tener al menos 8 caracteres')
+    .min(8)
     .regex(
       /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>])/,
-      'Debe incluir mayúscula, minúscula, número y carácter especial'
+      'Password inseguro'
     ),
 
-  firstName: z
-    .string()
-    .min(2, 'Nombre mínimo 2 caracteres')
-    .regex(/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/, 'Solo letras'),
+  firstName: z.string().min(2),
+  lastName: z.string().min(2),
 
-  lastName: z
-    .string()
-    .min(2, 'Apellido mínimo 2 caracteres')
-    .regex(/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/, 'Solo letras'),
-
-  documentId: z
-    .string()
-    .min(7, 'Documento inválido')
-    .max(20, 'Documento inválido'),
+  documentType: z.enum(['RUT', 'DNI']),
+  documentNumber: z.string().min(7),
 
   country: z.enum(['CL', 'AR']),
 
-  birthDate: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Formato YYYY-MM-DD'),
+  dateOfBirth: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
 
-  // ✅ OBLIGATORIO (alineado con backend y AuthContext)
-  phone: z
-    .string()
-    .regex(/^\+?[1-9]\d{7,14}$/, 'Formato internacional'),
+  phone: z.string().regex(/^\+?[1-9]\d{7,14}$/),
 })
 
 type RegisterFormData = z.infer<typeof registerSchema>
@@ -69,56 +56,69 @@ export default function RegisterPage() {
     resolver: zodResolver(registerSchema),
     defaultValues: {
       country: 'CL',
+      documentType: 'RUT',
     },
   })
 
   const onSubmit = async (data: RegisterFormData) => {
     try {
       setError(null)
-      await registerUser(data)
+
+      // 🔒 Contrato API EXACTO
+      const payload: RegisterRequest = {
+        email: data.email,
+        password: data.password,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        phone: data.phone,
+        documentType: data.documentType,
+        documentNumber: data.documentNumber,
+        country: data.country,
+        dateOfBirth: data.dateOfBirth,
+      }
+
+      await registerUser(payload)
     } catch (err) {
       if (err instanceof HttpError) {
         setError(err.getUserFriendlyMessage())
       } else {
-        setError('Error inesperado. Intenta nuevamente.')
+        setError('Error inesperado')
       }
     }
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 py-12">
-      <div className="w-full max-w-2xl space-y-8">
+    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
+      <div className="w-full max-w-md space-y-6">
         <div className="text-center">
-          <h1 className="text-3xl font-bold text-gray-900">
-            FTM Ticketera
-          </h1>
-          <h2 className="mt-4 text-xl text-gray-700">
-            Crear Cuenta
-          </h2>
-          <p className="mt-2 text-sm text-gray-600">
+          <h1 className="text-2xl font-bold">FTM Ticketera</h1>
+          <p className="text-sm">
             ¿Ya tienes cuenta?{' '}
-            <Link
-              href="/login"
-              className="font-medium text-primary hover:underline"
-            >
+            <Link href="/login" className="text-blue-600 hover:underline">
               Inicia sesión
             </Link>
           </p>
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          {error && (
-            <div className="rounded bg-red-50 p-3 text-sm text-red-700">
-              {error}
-            </div>
-          )}
+        {error && (
+          <div className="rounded bg-red-100 p-3 text-sm text-red-700">
+            {error}
+          </div>
+        )}
 
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
           <input {...register('firstName')} placeholder="Nombre" />
           <input {...register('lastName')} placeholder="Apellido" />
           <input {...register('email')} type="email" placeholder="Email" />
-          <input {...register('password')} type="password" placeholder="Contraseña" />
-          <input {...register('documentId')} placeholder="Documento" />
-          <input {...register('birthDate')} type="date" />
+          <input {...register('password')} type="password" placeholder="Password" />
+
+          <select {...register('documentType')}>
+            <option value="RUT">RUT</option>
+            <option value="DNI">DNI</option>
+          </select>
+
+          <input {...register('documentNumber')} placeholder="Documento" />
+          <input {...register('dateOfBirth')} type="date" />
           <input {...register('phone')} placeholder="+56912345678" />
 
           <select {...register('country')}>
@@ -129,9 +129,9 @@ export default function RegisterPage() {
           <button
             type="submit"
             disabled={isSubmitting}
-            className="w-full rounded bg-primary py-2 text-white disabled:opacity-50"
+            className="w-full rounded bg-blue-600 py-2 text-white"
           >
-            {isSubmitting ? 'Registrando...' : 'Crear Cuenta'}
+            {isSubmitting ? 'Registrando…' : 'Crear cuenta'}
           </button>
         </form>
       </div>
